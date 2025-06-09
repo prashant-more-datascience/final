@@ -3,7 +3,6 @@ import joblib
 import numpy as np
 import plotly.graph_objects as go
 from openai import OpenAI
-import typing_extensions
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -254,7 +253,6 @@ def set_bg_from_url(image_url):
 car_image_url = "https://i.pinimg.com/736x/13/a6/e7/13a6e7c7214158c4f676084788520266.jpg"
 set_bg_from_url(car_image_url)
 
-
 # ---------------- Load Model ----------------
 xgb_model = joblib.load("new_xgb_model.pkl")
 scaler = joblib.load("scaler_xgb_model.pkl")
@@ -335,6 +333,3 @@ for message in st.session_state.chat_history:
     st.write(message)
 
 chat_with_bot()
-
-
-
