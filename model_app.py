@@ -254,14 +254,10 @@ def set_bg_from_url(image_url):
 car_image_url = "https://i.pinimg.com/736x/13/a6/e7/13a6e7c7214158c4f676084788520266.jpg"
 set_bg_from_url(car_image_url)
 
-# ---------------- Load Model ----------------
 
+# ---------------- Load Model ----------------
 xgb_model = joblib.load("new_xgb_model.pkl")
 scaler = joblib.load("scaler_xgb_model.pkl")
-
-from tensorflow.keras.models import load_model
-ann_model = load_model("ann_model.keras")
-
 
 # ---------------- Input Form ----------------
 st.markdown('<div class="center-text">Enter vehicle details to predict fuel efficiency (KM/L).</div>', unsafe_allow_html=True)
@@ -271,26 +267,23 @@ displacement = st.number_input("Displacement", min_value=0, placeholder="Displac
 weight = st.number_input("Weight", min_value=0, placeholder="Weight")
 horsepower = st.number_input("Horsepower", min_value=0,placeholder="Horsepower")
 cylinders = st.number_input("Cylinders", min_value=0, max_value=12, placeholder="Cylinders")
-fuel_type = [1,0]
+fuel_type = st.selectbox("Fuel Type",options=["Petrol", "Diesel"],placeholder="Select Fuel Type")
+
+# ---------------- One-Hot Encode Fuel ----------------
+fuel_encoded = [0, 0]  # Order: [Diesel, Petrol]
+if fuel_type == "Diesel":
+    fuel_encoded[0] = 1
+elif fuel_type == "Petrol":
+    fuel_encoded[1] = 1
 
 # ---------------- Predict ----------------
 if st.button("PREDICT"):
     with st.spinner("Generating Prediction..."):
-        input_data = np.array([[cylinders, displacement, weight, horsepower, acceleration] + fuel_type])
+        input_data = np.array([[cylinders, displacement, weight, horsepower, acceleration] + fuel_encoded])
         input_scaled = scaler.transform(input_data)
-      # XGBoost Prediction
-        xgb_pred = xgb_model.predict(input_scaled)[0]
+       # XGBoost Prediction
+        st.session_state.kmpl_prediction = (xgb_model.predict(input_scaled)[0])+1.5  
 
-        # ANN Prediction
-        ann_pred = ann_model.predict(input_scaled)[0]
-
-        # Average Prediction
-        avg_pred = np.mean([xgb_pred, ann_pred])
-
-        # Save to session state
-        st.session_state.kmpl_prediction = avg_pred
-        st.session_state.xgb_pred = xgb_pred
-        st.session_state.ann_pred = ann_pred
         # Get LLM suggestions
         llm_response = suggest_car_modifications(
             acceleration, displacement, weight, horsepower, cylinders
@@ -303,7 +296,7 @@ if "kmpl_prediction" in st.session_state:
     fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
-            value=st.session_state.ann_pred,
+            value=st.session_state.kmpl_prediction,
             title={"text": "KILOMETERS PER LITER (KMPL)"},
             gauge={
                 "axis": {"range": [0, 50]},
@@ -326,7 +319,7 @@ if "kmpl_prediction" in st.session_state:
         template="plotly_dark",
     )
     st.plotly_chart(fig)
-    st.success(f"\u2705 Predicted KM/L: {st.session_state.ann_pred:.2f} KM/L")
+    st.success(f"\u2705 Predicted KM/L: {st.session_state.kmpl_prediction:.2f} KM/L")
 
 
     with st.expander("🔍 How can you improve fuel efficiency?"):
@@ -342,5 +335,6 @@ for message in st.session_state.chat_history:
     st.write(message)
 
 chat_with_bot()
+
 
 
