@@ -7,7 +7,7 @@ import typing_extensions
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    # api_key=st.secrets["OPENAI_API_KEY"],  # Replace with your actual OpenRouter API key
+    api_key=st.secrets["OPENAI_API_KEY"],  # Replace with your actual OpenRouter API key
 )
 
 def suggest_car_modifications(
@@ -57,7 +57,7 @@ def suggest_car_modifications(
 # Initialize OpenAI client (OpenRouter)
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    # api_key=st.secrets["OPENAI_API_KEY"],  # Replace with your OpenRouter key
+    api_key=st.secrets["OPENAI_API_KEY"],  # Replace with your OpenRouter key
 )
 
 # Function to Get Chatbot Responses
