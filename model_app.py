@@ -3,10 +3,11 @@ import joblib
 import numpy as np
 import plotly.graph_objects as go
 from openai import OpenAI
+import typing_extensions
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",  # Replace with your actual OpenRouter API key
+    api_key=st.secrets["OPENAI_API_KEY"],  # Replace with your actual OpenRouter API key
 )
 
 def suggest_car_modifications(
@@ -56,7 +57,7 @@ def suggest_car_modifications(
 # Initialize OpenAI client (OpenRouter)
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",  # Replace with your OpenRouter key
+    api_key=st.secrets["OPENAI_API_KEY"],  # Replace with your OpenRouter key
 )
 
 # Function to Get Chatbot Responses
@@ -258,6 +259,8 @@ set_bg_from_url(car_image_url)
 xgb_model = joblib.load("new_xgb_model.pkl")
 scaler = joblib.load("scaler_xgb_model.pkl")
 
+from tensorflow.keras.models import load_model
+ann_model = load_model("ann_model.keras")
 
 
 # ---------------- Input Form ----------------
@@ -275,10 +278,19 @@ if st.button("PREDICT"):
     with st.spinner("Generating Prediction..."):
         input_data = np.array([[cylinders, displacement, weight, horsepower, acceleration] + fuel_type])
         input_scaled = scaler.transform(input_data)
-      
-        # XGBoost Prediction
-        st.session_state.kmpl_prediction = xgb_model.predict(input_scaled)[0]  
+      # XGBoost Prediction
+        xgb_pred = xgb_model.predict(input_scaled)[0]
 
+        # ANN Prediction
+        ann_pred = ann_model.predict(input_scaled)[0]
+
+        # Average Prediction
+        avg_pred = np.mean([xgb_pred, ann_pred])
+
+        # Save to session state
+        st.session_state.kmpl_prediction = avg_pred
+        st.session_state.xgb_pred = xgb_pred
+        st.session_state.ann_pred = ann_pred
         # Get LLM suggestions
         llm_response = suggest_car_modifications(
             acceleration, displacement, weight, horsepower, cylinders
@@ -291,7 +303,7 @@ if "kmpl_prediction" in st.session_state:
     fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
-            value=st.session_state.kmpl_prediction,
+            value=st.session_state.ann_pred,
             title={"text": "KILOMETERS PER LITER (KMPL)"},
             gauge={
                 "axis": {"range": [0, 50]},
@@ -314,7 +326,7 @@ if "kmpl_prediction" in st.session_state:
         template="plotly_dark",
     )
     st.plotly_chart(fig)
-    st.success(f"\u2705 Predicted KM/L: {st.session_state.kmpl_prediction:.2f} KM/L")
+    st.success(f"\u2705 Predicted KM/L: {st.session_state.ann_pred:.2f} KM/L")
 
 
     with st.expander("🔍 How can you improve fuel efficiency?"):
